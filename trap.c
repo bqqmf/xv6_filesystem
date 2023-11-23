@@ -80,6 +80,7 @@ trap(struct trapframe *tf)
     lapiceoi();
     break;
 
+	
   //PAGEBREAK: 13
   default:
     if(myproc() == 0 || (tf->cs&3) == 0){
@@ -89,11 +90,11 @@ trap(struct trapframe *tf)
       panic("trap");
     }
 
-	if (tf->trapno == T_PGFLT) {
-		cprintf("page fault\n");
-		myproc()->killed = 1;
-		void *va = (void *)PGROUNDDOWN(rcr2());
-		mappages(myproc()->pgdir, (char *)va, PGSIZE, V2P(kalloc()), 6);
+	if (tf->trapno == T_PGFLT) { 
+		cprintf("page fault 0x%x\n", rcr2());
+		char *paddr = kalloc();
+		memset(paddr, 0, PGSIZE);
+		mappages(myproc()->pgdir, (char *) PGROUNDDOWN(rcr2()), PGSIZE, V2P(paddr), PTE_W | PTE_U);
 		break;
 	}
 
