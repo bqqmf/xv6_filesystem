@@ -93,19 +93,54 @@ sys_uptime(void)
 int
 sys_getvp(void) 
 {
-
-	return 0;
+	return (PGROUNDUP(myproc()->sz) / PGSIZE);
 }
 
 int
 sys_getpp(void) 
 {
+	pde_t *pgdir = myproc()->pgdir;
+	int count = 0;
 
-	return 0;
+	pte_t paddr_list[NPTENTRIES+1] = {0};
+	int n = 0;
+
+	pde_t *pde;
+	pte_t *pgtab;
+	for (int i=0; i < NPDENTRIES; ++i) {
+		pde = &pgdir[i];
+		if (*pde & PTE_P) { // if vp matches pp 
+			pgtab = (pte_t*)P2V(PTE_ADDR(*pde));
+			cprintf("In %p,\n", *pde);
+
+			for (int j=0; j < NPTENTRIES; ++j)  
+				if (pgtab[j] & PTE_P) {
+					// insert
+					for (int i=0; i<n; ++i) {
+						if (pgtab[j] == paddr_list[i])
+							break;
+					}
+
+					++ count;
+				}
+		}
+	}
+
+	return count;
 }
 
 int
 sys_ssualloc(void)
 {
+	int n;
+
+	if (argint(0, &n) < 0)
+		return -1;
+
+	if (n < 0) 
+		return -1;
+	//allocuvm(myproc()->pgdir, 
+	growproc(n);
+
 	return 0;
 }
