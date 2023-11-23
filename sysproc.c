@@ -43,7 +43,7 @@ sys_getpid(void)
 }
 
 int
-sys_sbrk(void)
+sys_sbrk(void)  // set break
 {
   int addr;
   int n;
@@ -51,10 +51,8 @@ sys_sbrk(void)
   if(argint(0, &n) < 0)
     return -1;
   addr = myproc()->sz;
-  /*
-  if(growproc(n) < 0)
+  if (growproc(n) < 0)
     return -1;
-	*/
   return addr;
 }
 
@@ -131,22 +129,8 @@ sys_ssualloc(void)
 	if (n < 0 || n % PGSIZE != 0) // exception
 		return -1;
 
-	// allocuvm();
-	// growproc();
+	uint oldsz = myproc()->sz;
+    myproc()->sz += n;
 
-	return n;
+	return oldsz;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
