@@ -51,8 +51,10 @@ sys_sbrk(void)
   if(argint(0, &n) < 0)
     return -1;
   addr = myproc()->sz;
+  /*
   if(growproc(n) < 0)
     return -1;
+	*/
   return addr;
 }
 
@@ -123,13 +125,28 @@ sys_ssualloc(void)
 {
 	int n;
 
-	if (argint(0, &n) < 0)
+	if (argint(0, &n) < 0) // get argument 
 		return -1;
 
-	if (n < 0) 
+	if (n < 0 || n % PGSIZE != 0) // exception
 		return -1;
-	//allocuvm(myproc()->pgdir, 
-	growproc(n);
 
-	return 0;
+	// allocuvm();
+	// growproc();
+
+	return n;
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
