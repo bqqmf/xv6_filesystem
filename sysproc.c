@@ -102,27 +102,16 @@ sys_getpp(void)
 	pde_t *pgdir = myproc()->pgdir;
 	int count = 0;
 
-	pte_t paddr_list[NPTENTRIES+1] = {0};
-	int n = 0;
-
 	pde_t *pde;
 	pte_t *pgtab;
-	for (int i=0; i < NPDENTRIES; ++i) {
+	for (int i=0; i < PDX(KERNBASE); ++i) {
 		pde = &pgdir[i];
 		if (*pde & PTE_P) { // if vp matches pp 
 			pgtab = (pte_t*)P2V(PTE_ADDR(*pde));
-			cprintf("In %p,\n", *pde);
 
 			for (int j=0; j < NPTENTRIES; ++j)  
-				if (pgtab[j] & PTE_P) {
-					// insert
-					for (int i=0; i<n; ++i) {
-						if (pgtab[j] == paddr_list[i])
-							break;
-					}
-
+				if (pgtab[j] & PTE_P) 
 					++ count;
-				}
 		}
 	}
 
