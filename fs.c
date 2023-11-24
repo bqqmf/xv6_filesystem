@@ -383,49 +383,63 @@ bmap(struct inode *ip, uint bn)
   bn -= NDIRECT;  
 
   if(bn < NINDIRECT){  // if bn'th block is indirect block
-
     // Load indirect block, allocating if necessary.
-    if((addr = ip->addrs[NDIRECT]) == 0)  // if indirect block in addrs is null
-      ip->addrs[NDIRECT] = addr = balloc(ip->dev);  // block alloc
+	for (int i=1; i<=4; i++) {
+	  if (bn < 128 * i) {
+        if((addr = ip->addrs[5 + i]) == 0)  // if i'th indirect block in addrs is null
+          ip->addrs[5 + i] = addr = balloc(ip->dev);  // block alloc
 
-    bp = bread(ip->dev, addr);  // buf block where addr points  
-    a = (uint*)bp->data;  // get data from buf 
+        bp = bread(ip->dev, addr);  // buf block where addr points  
+        a = (uint*)bp->data;  // get data from buf 
 
-    if((addr = a[bn]) == 0){  // if n'th block in indirect is null 
-      a[bn] = addr = balloc(ip->dev);  // block alloc
-      log_write(bp);
-    }
-    brelse(bp);
-    return addr;  // return data pointed by indirect block
+        if((addr = a[bn % 128]) == 0){  // if n'th block in indirect is null 
+          a[bn % 128] = addr = balloc(ip->dev);  // block alloc
+          log_write(bp);
+        }
+        brelse(bp);
+        return addr;  // return data pointed by indirect block
+	  }
+	}
   }
 
-  /*
   bn -= NINDIRECT;
 
   if (bn < NDINDIRECT) {
+	for (int i=1; i<=2; ++i) {
+	  if (bn < 128 * 128 * i) {
+        if ((addr = ip->addrs[9 + i]) == 0) //ifdouble indirect block in addrs is null
+            ip->addrs[9 + i] = addr = balloc(id->dev);  // block alloc
 
-    if ((addr = ip->addrs[bn]) == 0)  // if double indirect block in addrs is null
-        ip->addrs[bn] = addr = balloc(id->dev);  // block alloc
+        bp = bread(ip->dev, addr);  // read buf where addr points // level 1 table
+        a = (uint*)bp->data;  // get data from buf 
 
-	// level 1 table
-    bp = bread(ip->dev, addr);  // read buf where addr points
-    a = (uint*)bp->data;  // get data from buf 
+		// debugging from here
+	    if ((addr = a[bn / 128]) == 0) {
+	    	a[bn / 128] = addr = balloc(ip->dev);
+			log_write(bp);
+		}
+		brelse(bp);
+	    
+	    // level 2 table
+        bp = bread(ip->dev, addr);  // read buf where addr points
+        a = (uint*)bp->data;  // get data from buf 
 
-	if ((addr = a[bn]) == 0) 
-		a[bn] = addr = balloc(ip->dev);
-	
-	// level 2 table
-    bp = bread(ip->dev, addr);  // read buf where addr points
-    a = (uint*)bp->data;  // get data from buf 
-
-	if ((addr = a[bn]) == 0) {
-		a[bn] = addr = balloc(ip->dev);
-		log_write(bp);
+	    if ((addr = a[bn % 128]) == 0) {
+	    	a[bn % 128] = addr = balloc(ip->dev);
+	    	log_write(bp);
+	    }
+	    brelse(bp);
+	    return addr;
+	  }
 	}
-	brelse(bp);
-	return addr;
   }
-  */
+
+  bn -= NDINDIRECT;
+
+  if (bn < NTINDIRECT) {
+	  // debug
+
+  }
 
   panic("bmap: out of range");
 }
