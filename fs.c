@@ -375,26 +375,57 @@ bmap(struct inode *ip, uint bn)
   uint addr, *a;
   struct buf *bp;
 
-  if(bn < NDIRECT){
-    if((addr = ip->addrs[bn]) == 0)
-      ip->addrs[bn] = addr = balloc(ip->dev);
-    return addr;
+  if(bn < NDIRECT){  // if bn'th block is direct block
+    if((addr = ip->addrs[bn]) == 0)  // if n'th block in addrs is null 
+      ip->addrs[bn] = addr = balloc(ip->dev);  // block alloc 
+    return addr;  // return data pointed by direct block
   }
-  bn -= NDIRECT;
+  bn -= NDIRECT;  
 
-  if(bn < NINDIRECT){
+  if(bn < NINDIRECT){  // if bn'th block is indirect block
+
     // Load indirect block, allocating if necessary.
-    if((addr = ip->addrs[NDIRECT]) == 0)
-      ip->addrs[NDIRECT] = addr = balloc(ip->dev);
-    bp = bread(ip->dev, addr);
-    a = (uint*)bp->data;
-    if((addr = a[bn]) == 0){
-      a[bn] = addr = balloc(ip->dev);
+    if((addr = ip->addrs[NDIRECT]) == 0)  // if indirect block in addrs is null
+      ip->addrs[NDIRECT] = addr = balloc(ip->dev);  // block alloc
+
+    bp = bread(ip->dev, addr);  // buf block where addr points  
+    a = (uint*)bp->data;  // get data from buf 
+
+    if((addr = a[bn]) == 0){  // if n'th block in indirect is null 
+      a[bn] = addr = balloc(ip->dev);  // block alloc
       log_write(bp);
     }
     brelse(bp);
-    return addr;
+    return addr;  // return data pointed by indirect block
   }
+
+  /*
+  bn -= NINDIRECT;
+
+  if (bn < NDINDIRECT) {
+
+    if ((addr = ip->addrs[bn]) == 0)  // if double indirect block in addrs is null
+        ip->addrs[bn] = addr = balloc(id->dev);  // block alloc
+
+	// level 1 table
+    bp = bread(ip->dev, addr);  // read buf where addr points
+    a = (uint*)bp->data;  // get data from buf 
+
+	if ((addr = a[bn]) == 0) 
+		a[bn] = addr = balloc(ip->dev);
+	
+	// level 2 table
+    bp = bread(ip->dev, addr);  // read buf where addr points
+    a = (uint*)bp->data;  // get data from buf 
+
+	if ((addr = a[bn]) == 0) {
+		a[bn] = addr = balloc(ip->dev);
+		log_write(bp);
+	}
+	brelse(bp);
+	return addr;
+  }
+  */
 
   panic("bmap: out of range");
 }
