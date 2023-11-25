@@ -21,18 +21,11 @@ struct superblock {
   uint bmapstart;    // Block number of first free map block
 };
 
-/*
-#define NDIRECT 12
-#define NINDIRECT (BSIZE / sizeof(uint))
-#define MAXFILE (NDIRECT + NINDIRECT)
-*/
-
-#define NDIRECT 6     // direct
-#define NINDIRECT 128   // indirect
-#define NDINDIRECT 128 * 128  // double indirect
-#define NTINDIRECT 128 * 128 * 128  // triple indirect
+#define NDIRECT 6     // direct  0, 1, 2, 3, 4, 5
+#define NINDIRECT 128 * 4 // indirect  6, 7, 8, 9
+#define NDINDIRECT 128 * 128 * 2 // double indirect  10, 11
+#define NTINDIRECT 128 * 128 * 128  // triple indirect  12
 #define MAXFILE (NDIRECT + NINDIRECT + NDINDIRECT + NTINDIRECT)
-
 
 // On-disk inode structure
 struct dinode {
