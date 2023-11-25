@@ -375,10 +375,21 @@ bmap(struct inode *ip, uint bn)
   uint addr, *a;
   struct buf *bp;
 
+  uint tmp = bn;
+  cprintf("tmp : %d\n", tmp);
+  if (tmp == 30) {
+	  if ((addr = ip->addrs[12]) ==0){
+		cprintf("addr 0x%x\n", addr);
+		ip->addrs[bn] = addr = balloc(ip->dev);  // block alloc 
+		cprintf("balloc bn %d ip->addrs[%d] 0x%x\n", tmp, bn, addr);
+	  }
+	  return addr;
+  }
+
   if(bn < NDIRECT){  // if bn'th block is direct block
     if((addr = ip->addrs[bn]) == 0) { // if n'th block in addrs is null 
       ip->addrs[bn] = addr = balloc(ip->dev);  // block alloc 
-	  cprintf("balloc ip->addrs[%d]\n", bn);
+	  cprintf("balloc bn %d ip->addrs[%d] 0x%x\n", tmp, bn, addr);
 	}
     return addr;  // return data pointed by direct block
   }
@@ -390,19 +401,18 @@ bmap(struct inode *ip, uint bn)
 	  if (bn < 128 * i) {
         if((addr = ip->addrs[5 + i]) == 0) { // if i'th indirect block in addrs is null
           ip->addrs[5 + i] = addr = balloc(ip->dev);  // block alloc
-		  cprintf("balloc ip->addrs[%d]\n", 5+i);
+	      cprintf("balloc bn %d ip->addrs[%d] 0x%x\n", tmp, 5+i, addr);
 		}
 
         bp = bread(ip->dev, addr);  // buf block where addr points  
         a = (uint*)bp->data;  // get data from buf 
 
         if((addr = a[bn % 128]) == 0){  // if n'th block in indirect is null 
-		  cprintf("balloc ip->addrs[%d]->[%d]\n", 5+i, bn%128);
           a[bn % 128] = addr = balloc(ip->dev);  // block alloc
+	      cprintf("balloc bn %d ip->addrs[%d]->[%d] 0x%x\n", tmp, 5+i, bn%128, addr);
           log_write(bp);
         }
-        brelse(bp);
-        return addr;  // return data pointed by indirect block
+        brelse(bp); return addr;  // return data pointed by indirect block
 	  }
 	}
   }
@@ -410,19 +420,23 @@ bmap(struct inode *ip, uint bn)
   bn -= NINDIRECT;
 
   if (bn < NDINDIRECT) {
-	for (int i=1; i<=2; ++i) {
-	  if (bn < 128 * 128 * i) {  // bn : 0 ~ 128^2 - 1 or 128^2 ~ 128^2 * 2 - 1
-        if ((addr = ip->addrs[9 + i]) == 0) {// if i'th double indirect block in addrs is null
-		    cprintf("balloc ip->addrs[%d]\n", 9+i);
-            ip->addrs[9 + i] = addr = balloc(ip->dev);  // block alloc
+	//for (int i=1; i<=2; ++i) {
+		int lv0_idx = bn / (128*128) + 10;
+	  //if (bn < 128 * 128 * i) {  // bn : 0 ~ 128^2 - 1 or 128^2 ~ 128^2 * 2 - 1
+        //if ((addr = ip->addrs[9 + i]) == 0) {// if i'th double indirect block in addrs is null
+        if ((addr = ip->addrs[lv0_idx]) == 0) {// if i'th double indirect block in addrs is null
+		    cprintf("balloc bn %d ip->addrs[%d]\n",tmp, lv0_idx);
+            ip->addrs[lv0_idx] = addr = balloc(ip->dev);  // block alloc
 		}
 
         bp = bread(ip->dev, addr);  // level 1 table
         a = (uint*)bp->data;  
 
-	    if ((addr = a[bn / 128]) == 0) {  // bn/128 : index in lv 1
-		    cprintf("balloc ip->addrs[%d]->[%d]\n", 9+i, bn/128);
-	    	a[bn / 128] = addr = balloc(ip->dev);
+		int lv1_idx = (bn / 128) % 128;
+	    if ((addr = a[lv1_idx]) == 0) {  // bn/128 : index in lv 1
+		    //cprintf("balloc bn %d ip->addrs[%d]->[%d]\n", tmp, 9+i, lv1_idx);
+		    cprintf("balloc bn %d ip->addrs[%d]->[%d]\n", tmp, lv0_idx, lv1_idx);
+	    	a[lv1_idx] = addr = balloc(ip->dev);
 			log_write(bp);
 		}
 		brelse(bp);
@@ -430,22 +444,24 @@ bmap(struct inode *ip, uint bn)
         bp = bread(ip->dev, addr);  // level 2 table
         a = (uint*)bp->data;  
 
-	    if ((addr = a[bn % 128]) == 0) {  // bn%128 : index in lv 2
-		    cprintf("balloc ip->addrs[%d]->[%d]->[%d]\n", 9+i, bn/128, bn%128);
-	    	a[bn % 128] = addr = balloc(ip->dev);
+		int lv2_idx = bn % 128;
+	    if ((addr = a[lv2_idx]) == 0) {  // bn%128 : index in lv 2
+		    //cprintf("balloc bn %d ip->addrs[%d]->[%d]->[%d]\n", tmp, 9+i, lv1_idx, lv2_idx);
+		    cprintf("balloc bn %d ip->addrs[%d]->[%d]->[%d]\n", tmp, lv0_idx, lv1_idx, lv2_idx);
+	    	a[lv2_idx] = addr = balloc(ip->dev);
 	    	log_write(bp);
 	    }
 	    brelse(bp);
 	    return addr;
-	  }
-	}
+	  //}
+	//}
   }
 
   bn -= NDINDIRECT;
 
   if (bn < NTINDIRECT) {  // bn : 0 ~ 128^3 - 1
     if ((addr = ip->addrs[12]) == 0) {
-	  cprintf("balloc ip->addrs[%d]\n", 12);
+	  cprintf("balloc bn %d ip->addrs[%d]\n", tmp, 12);
 	  ip->addrs[12] = addr = balloc(ip->dev);
 	}
 
@@ -454,7 +470,7 @@ bmap(struct inode *ip, uint bn)
 
 	int lv1_idx = bn / (128 * 128);
 	if ((addr = a[lv1_idx]) == 0) {
-	    cprintf("balloc ip->addrs[12]->[%d]\n", lv1_idx);
+	    cprintf("balloc bn %d ip->addrs[12]->[%d]\n", tmp, lv1_idx);
 		a[lv1_idx] = addr = balloc(ip->dev);
 		log_write(bp);
 	}
@@ -463,9 +479,9 @@ bmap(struct inode *ip, uint bn)
     bp = bread(ip->dev, addr);  // level 2 table
     a = (uint*)bp->data;  
 
-	int lv2_idx = bn / (lv1_idx * 128);
+	int lv2_idx = (bn / 128 ) % 128;
 	if ((addr = a[lv2_idx]) == 0) {
-	    cprintf("balloc ip->addrs[12]->[%d]->[%d]\n", lv1_idx, lv2_idx);
+	    cprintf("balloc bn %d ip->addrs[12]->[%d]->[%d]\n", tmp, lv1_idx, lv2_idx);
 		a[lv2_idx] = addr = balloc(ip->dev);
 		log_write(bp);
 	}
@@ -474,9 +490,9 @@ bmap(struct inode *ip, uint bn)
     bp = bread(ip->dev, addr);  // level 3 table
     a = (uint*)bp->data;  
 
-	int lv3_idx = bn / (lv1_idx * lv2_idx); 
+	int lv3_idx = bn % 128;
 	if ((addr = a[lv3_idx]) == 0) {
-	    cprintf("balloc ip->addrs[12]->[%d]->[%d]->[%d]\n", lv1_idx, lv2_idx, lv3_idx);
+	    cprintf("balloc bn %d ip->addrs[12]->[%d]->[%d]->[%d]\n", tmp, lv1_idx, lv2_idx, lv3_idx);
 		a[lv3_idx] = addr = balloc(ip->dev);
 		log_write(bp);
 	}
