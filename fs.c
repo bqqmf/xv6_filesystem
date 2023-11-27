@@ -387,6 +387,7 @@ bmap(struct inode *ip, uint bn)
   }
   */
 
+  cprintf("In bmap, bn : %d\n", bn);
   if(bn < NDIRECT){  // if bn'th block is direct block
     if((addr = ip->addrs[bn]) == 0) { // if n'th block in addrs is null 
       ip->addrs[bn] = addr = balloc(ip->dev);  // block alloc 
@@ -398,11 +399,13 @@ bmap(struct inode *ip, uint bn)
 
   if(bn < NINDIRECT){  // if bn'th block is indirect block
     // Load indirect block, allocating if necessary.
-	for (int i=1; i<=4; i++) {
-	  if (bn < 128 * i) {
-        if((addr = ip->addrs[5 + i]) == 0) { // if i'th indirect block in addrs is null
-          ip->addrs[5 + i] = addr = balloc(ip->dev);  // block alloc
-	      cprintf("balloc bn %d ip->addrs[%d] 0x%x\n", tmp, 5+i, addr);
+	//for (int i=1; i<=4; i++) {
+		int lv0_idx = bn / 128 + 6;
+	  //if (bn < 128 * i) {
+        //if((addr = ip->addrs[5 + i]) == 0) { // if i'th indirect block in addrs is null
+        if((addr = ip->addrs[lv0_idx]) == 0) { // if i'th indirect block in addrs is null
+          ip->addrs[lv0_idx] = addr = balloc(ip->dev);  // block alloc
+	      cprintf("balloc bn %d ip->addrs[%d] 0x%x\n", tmp, lv0_idx, addr);
 		}
 
         bp = bread(ip->dev, addr);  // buf block where addr points  
@@ -410,12 +413,12 @@ bmap(struct inode *ip, uint bn)
 
         if((addr = a[bn % 128]) == 0){  // if n'th block in indirect is null 
           a[bn % 128] = addr = balloc(ip->dev);  // block alloc
-	      cprintf("balloc bn %d ip->addrs[%d]->[%d] 0x%x\n", tmp, 5+i, bn%128, addr);
+	      cprintf("balloc bn %d ip->addrs[%d]->[%d] 0x%x\n", tmp, lv0_idx, bn%128, addr);
           log_write(bp);
         }
         brelse(bp); return addr;  // return data pointed by indirect block
-	  }
-	}
+	  //}
+	//}
   }
 
   bn -= NINDIRECT;
