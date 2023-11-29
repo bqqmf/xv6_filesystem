@@ -91,7 +91,6 @@ trap(struct trapframe *tf)
     }
 
 	if (tf->trapno == T_PGFLT) { 
-		cprintf("page fault 0x%x\n", rcr2());
 		char *paddr = kalloc();
 		memset(paddr, 0, PGSIZE);
 		mappages(myproc()->pgdir, (char *) PGROUNDDOWN(rcr2()), PGSIZE, V2P(paddr), PTE_W | PTE_U);
